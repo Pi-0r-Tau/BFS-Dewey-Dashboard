@@ -1,0 +1,1055 @@
+<!-- filepath: /workspaces/EBP/bfs-dewey-dashboard/index.html -->
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0c0c">
+<title>Book Publication Dashboard — BFS Dewey Data</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- ── HEADER ─────────────────────────────────────────────── -->
+<header class="govuk-header" role="banner">
+  <div class="govuk-header__inner">
+    <a href="#" class="govuk-header__logotype" aria-label="GOV.UK homepage">
+      <span class="govuk-header__logotype-text" aria-hidden="true">Dui</span>
+    </a>
+    <span class="govuk-header__sep" aria-hidden="true"></span>
+    <a href="#" class="govuk-header__service">Book Publication Dashboard</a>
+    <a href="/dashboard" class="govuk-header__link" aria-label="Link to dashboard homepage">Home</a>
+  </div>
+    </div>
+  </header>
+</header>
+
+<!-- ── PHASE BANNER ──────────────────────────────────────── -->
+<div class="govuk-phase-banner" role="region" aria-label="Service status">
+  <div class="govuk-phase-banner__inner">
+    <span class="govuk-tag">Beta</span>
+    <span class="govuk-phase-banner__text">
+      Data from the public
+      <a href="https://github.com/Pi-0r-Tau/BFS_Dewey_JSON_Data" target="_blank" rel="noopener noreferrer">BFS Dewey JSON dataset</a>
+      — 663,000+ books, DDC 000–800, 2021–2026.
+    </span>
+  </div>
+</div>
+
+<!-- ── ISBN HERO BAND ─────────────────────────────────────── -->
+<section class="isbn-band" aria-labelledby="isbn-heading">
+  <div class="isbn-band__inner">
+    <h2 class="isbn-band__heading" id="isbn-heading">Search by ISBN</h2>
+    <span class="isbn-band__hint" id="isbn-hint">
+      Enter a 10 or 13-digit ISBN to find a specific book across the full dataset (2021–2026).
+      If data is already loaded, results are instant.
+    </span>
+    <div class="isbn-form" role="search" aria-label="ISBN lookup">
+      <div class="isbn-input-wrap">
+        <label for="isbn-input" class="sr-only">ISBN number</label>
+        <input
+          class="isbn-input"
+          type="search"
+          id="isbn-input"
+          name="isbn"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="e.g. 9781234567890"
+          aria-describedby="isbn-hint"
+          maxlength="17"
+          pattern="[0-9\-X ]+"
+        >
+      </div>
+      <button class="isbn-search-btn" id="isbn-btn" onclick="isbnSearch()" aria-label="Search for this ISBN">
+        Search
+      </button>
+    </div>
+    <button class="isbn-clear-btn" id="isbn-clear" onclick="clearIsbn()" aria-label="Clear ISBN search results">
+      Clear result
+    </button>
+
+    <!-- searching progress -->
+    <div id="isbn-searching" style="display:none" aria-live="polite" aria-atomic="true">
+      <p class="isbn-progress" id="isbn-progress-text">Searching…</p>
+      <div class="isbn-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="ISBN search progress" id="isbn-prog-bar">
+        <div class="isbn-progress-fill" id="isbn-prog-fill"></div>
+      </div>
+      <button class="isbn-stop-btn" id="isbn-stop" onclick="stopIsbnSearch()">Stop search</button>
+    </div>
+
+    <!-- result -->
+    <div class="isbn-result" id="isbn-result" aria-live="polite" aria-atomic="true"></div>
+  </div>
+</section>
+
+<!-- ── CONTROLS BAND ──────────────────────────────────────── -->
+<section class="controls-band" aria-labelledby="controls-heading">
+  <div class="controls-band__inner">
+    <div class="controls-grid">
+      <!-- Date Range -->
+            <div class="controls-group controls-group--dates">
+        <h2 class="controls-group__title" id="controls-heading">Select date range</h2>
+        <!-- Needs to be updated when and if the main repo database is updated -->
+        <p class="govuk-hint controls-hint">Data available 01 January 2020 – 10 Feb 2026</p>
+        <div class="controls-dates">
+            <div class="controls-date-field">
+            <label class="govuk-label" for="date-from">From</label>
+            <input class="govuk-input" type="date" id="date-from" value="2020-01-01" min="2020-01-01" max="2026-02-10">
+          </div>
+          <div class="controls-date-field">
+            <label class="govuk-label" for="date-to">To</label>
+            <input class="govuk-input" type="date" id="date-to" value="2026-02-10" min="2020-01-01" max="2026-02-10">
+          </div>
+          <div class="controls-quick" role="group" aria-label="Quick date shortcuts">
+            <button class="govuk-button--secondary" onclick="setQuick(1)">1 day</button>
+            <button class="govuk-button--secondary" onclick="setQuick(7)">1 week</button>
+            <button class="govuk-button--secondary" onclick="setQuick(14)">2 weeks</button>
+          </div>
+          <button class="govuk-button controls-load-btn" id="load-btn" onclick="loadData()">Load data</button>
+        </div>
+        <div id="progress-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Loading progress">
+          <div class="prog-fill" id="prog-fill"></div>
+          <div class="prog-label" id="prog-text" aria-live="polite" aria-atomic="true"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="controls-group controls-group--stats" id="sidebar-stats">
+        <p class="controls-group__title">Loaded data</p>
+        <div class="sstat-list" id="sstat-list"></div>
+      </div>
+
+
+    <!-- Alerts -->
+    <div class="controls-alerts">
+      <div class="govuk-error-summary" id="alert-error" role="alert" aria-live="assertive" aria-atomic="true">
+        <h3 class="govuk-error-summary__title">There is a problem</h3>
+        <div class="govuk-error-summary__body" id="error-body"></div>
+      </div>
+      <div class="govuk-warning-text" id="alert-warn" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MAIN ───────────────────────────────────────────────── -->
+<div class="govuk-width-container">
+  <main id="main-content" class="govuk-main-wrapper" role="main" tabindex="-1">
+    <div id="page-intro">
+      <h1 class="govuk-heading-xl" style="margin-bottom:10px">Book Publication Dashboard</h1>
+      <p class="govuk-body-l" style="max-width:620px;margin-bottom:25px;color:var(--text-2)">
+        Analyse publication trends, Dewey Decimal classifications, formats and prices
+        from the BFS Dewey dataset. Use the ISBN search above to look up any book directly,
+        or select a date range to load dashboard data.
+      </p>
+    </div>
+    <div id="empty-state" aria-live="polite">
+      <p class="govuk-heading-m" style="color:var(--text-2)">No data loaded</p>
+      <p class="govuk-body" style="margin-top:0">Select a date range and click <strong>Load data</strong>, or use the ISBN search above to find a specific book.</p>
+      <small class="govuk-body-s">Data begins 3 May 2021. Weekends and holidays may have no entries.</small>
+    </div>
+    <div id="metrics" role="region" aria-label="Summary statistics"></div>
+    <div id="chart-grid" role="region" aria-label="Data visualisations">
+      <div class="chart-panel drillable" id="panel-dewey">
+        <div class="panel-head"><span class="panel-title">Books by Dewey class</span><span class="panel-hint">Select a bar to drill down</span></div>
+        <div class="panel-body"><canvas id="chart-dewey" height="230" role="img" aria-label="Bar chart showing books per Dewey class"></canvas></div>
+      </div>
+      <div class="chart-panel drillable" id="panel-fmt">
+        <div class="panel-head"><span class="panel-title">Format breakdown</span><span class="panel-hint">Select a segment to drill down</span></div>
+        <div class="panel-body"><canvas id="chart-fmt" height="230" role="img" aria-label="Doughnut chart showing books by format"></canvas></div>
+      </div>
+      <div class="chart-panel span2">
+        <div class="panel-head"><span class="panel-title">Titles per day</span><span class="panel-meta" id="timeline-meta"></span></div>
+        <div class="panel-body"><canvas id="chart-timeline" height="150" role="img" aria-label="Line chart of titles added per day"></canvas></div>
+      </div>   
+      <div class="chart-panel drillable">
+        <div class="panel-head"><span class="panel-title">Top publishers</span><span class="panel-hint">Select a row to drill down</span></div>
+        <div class="panel-body"><ul class="bar-list" id="bar-publishers" aria-label="Top publishers by book count"></ul></div>
+      </div>
+      <div class="chart-panel drillable" id="panel-price">
+        <div class="panel-head"><span class="panel-title">Price distribution</span><span class="panel-hint">Select a bar to drill down</span></div>
+        <div class="panel-body"><canvas id="chart-price" height="230" role="img" aria-label="Bar chart showing books by price range"></canvas></div>
+      </div>
+    </div>
+
+    <div id="table-section">
+      <div class="table-toolbar">
+        <h2 class="table-toolbar-title" id="table-heading">Browse books</h2>
+                        <!-- Filters -->
+      <div class="controls-group controls-group--filters" id="filter-section" style="display:none">
+        <div>
+        </div>
+        <p class="controls-group__title">Filter results</p>
+        <div class="controls-filters">
+          <div class="controls-filter-field controls-filter-field--search">
+            <label class="govuk-label" for="search-box">Search</label>
+            <input class="govuk-input" type="search" id="search-box" placeholder="Title, author, publisher, DDC or ISBN" oninput="applyFilter()" aria-controls="tbl-body">
+          </div>
+          <div class="controls-filter-field">
+            <label class="govuk-label" for="fmt-select">Format</label>
+            <select class="govuk-select" id="fmt-select" onchange="applyFilter()" aria-controls="tbl-body">
+              <option value="">All formats</option>
+            </select>
+          </div>
+          <div class="controls-filter-field">
+            <label class="govuk-label" for="ddc-select">Dewey class</label>
+            <select class="govuk-select" id="ddc-select" onchange="applyFilter()" aria-controls="tbl-body">
+              <option value="">All classes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+        <span class="result-count" id="result-count" aria-live="polite" aria-atomic="true"></span>
+        <button class="govuk-button--small" onclick="exportCSV()">Download CSV</button>
+      </div>
+      <div class="govuk-table-wrap">
+        <table class="govuk-table" aria-labelledby="table-heading">
+          <thead class="govuk-table__head">
+            <tr>
+              <th scope="col" onclick="sortTable('title')"     aria-sort="none">Title</th>
+              <th scope="col" onclick="sortTable('author')"    aria-sort="none">Author</th>
+              <th scope="col" onclick="sortTable('publisher')" aria-sort="none">Publisher</th>
+              <th scope="col">Format</th>
+              <th scope="col" onclick="sortTable('pubDate')"   aria-sort="none">Pub date</th>
+              <th scope="col" onclick="sortTable('dewey')"     aria-sort="none">DDC</th>
+              <th scope="col" onclick="sortTable('rrpNum')"    aria-sort="none">RRP</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body" id="tbl-body"></tbody>
+        </table>
+      </div>
+      <nav class="govuk-pagination" id="pagination" aria-label="Table pagination"></nav>
+    </div>
+  </main>
+</div>
+
+<!-- FOOTER -->
+<footer class="govuk-footer" role="contentinfo">
+  <div class="govuk-footer__inner">
+    <ul class="govuk-footer__links" aria-label="Footer links">
+      <li><a class="govuk-footer__link" href="https://github.com/Pi-0r-Tau/BFS_Dewey_JSON_Data" target="_blank" rel="noopener noreferrer">Data source on GitHub</a></li>
+      <li><a class="govuk-footer__link" href="https://www.dewey.info/" target="_blank" rel="noopener noreferrer">About Dewey Decimal Classification</a></li>
+      <li><a class="govuk-footer__link" href="https://design-system.service.gov.uk/" target="_blank" rel="noopener noreferrer">GOV.UK Design System</a></li>
+    </ul>
+    <p class="govuk-footer__meta">Built with open data. No cookies. No tracking.</p>
+  </div>
+</footer>
+
+<!-- DRILL MODAL -->
+<div id="drill-overlay" role="dialog" aria-modal="true" aria-labelledby="drill-title" aria-hidden="true">
+  <div id="drill-modal">
+    <div class="drill-modal-head">
+      <h2 class="drill-modal-title" id="drill-title"></h2>
+      <button class="drill-modal-close" id="drill-close" onclick="closeDrillModal()" aria-label="Close">Close</button>
+    </div>
+    <div class="drill-modal-toolbar" id="drill-toolbar"></div>
+    <div class="drill-modal-body" id="drill-body" tabindex="0"></div>
+  </div>
+</div>
+
+<style>
+/* Drill modal toolbar */
+.drill-modal-toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 12px 24px;
+  background: var(--page-bg, #f3f2f1);
+  border-bottom: 1px solid var(--border, #b1b4b6);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.drill-modal-toolbar button {
+  padding: 8px 16px;
+  font-size: 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.drill-modal-toolbar .btn-download {
+  background: var(--green, #00703c);
+  color: #fff;
+}
+.drill-modal-toolbar .btn-download:hover {
+  background: #005a30;
+}
+.drill-modal-toolbar .btn-chart {
+  background: var(--blue, #1d70b8);
+  color: #fff;
+}
+.drill-modal-toolbar .btn-chart:hover {
+  background: #003078;
+}
+.drill-modal-toolbar .btn-chart.active {
+  background: #003078;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+.drill-modal-toolbar select {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border, #b1b4b6);
+  border-radius: 4px;
+}
+
+/* Chart container in modal */
+.drill-chart-container {
+  padding: 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--border, #b1b4b6);
+}
+.drill-chart-container canvas {
+  max-height: 300px;
+}
+</style>
+
+<script>
+'use strict';
+
+/* ── CONFIG ──────────────────────────────────────────────── */
+const BASE   = 'https://raw.githubusercontent.com/Pi-0r-Tau/BFS_Dewey_JSON_Data/main/PerDay';
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+const DDC_CLASSES = {
+  '0':'000 — Computer Science','1':'100 — Philosophy',
+  '2':'200 — Religion','3':'300 — Social Sciences',
+  '4':'400 — Language','5':'500 — Pure Science',
+  '6':'600 — Applied Science','7':'700 — Arts & Recreation',
+  '8':'800 — Literature'
+};
+const CHART_COLOURS = ['#1d70b8','#00703c','#d4351c','#f47738','#4c2c92','#28a197','#0b0c0c','#b58840','#5694ca'];
+const PAGE_SIZE = 30;
+
+const FULL_START = new Date(2020, 0, 1); // Needs to be changed when and if BFS_DEWEY_JSON is updated 
+const FULL_END   = new Date(2026, 1, 10);
+
+/* ── STATE ───────────────────────────────────────────────── */
+let allBooks  = [];
+let viewBooks = [];
+let sortKey   = 'title';
+let sortAsc   = true;
+let curPage   = 0;
+let charts    = {};
+let lastFocus = null;
+let isbnAbort = false;
+
+/* Drill-down state */
+let drillData = [];
+let drillTitle = '';
+let drillChart = null;
+
+/* ── PATH BUILDER ────────────────────────────────────────── */
+function buildUrl(d) {
+  const day = d.getDate();
+  const mm  = String(d.getMonth() + 1).padStart(2, '0');
+  const yy  = String(d.getFullYear()).slice(2);
+  return `${BASE}/${d.getFullYear()}/${MONTHS[d.getMonth()]}/${day}-${mm}-${yy}.json`;
+}
+function parseDate(s) { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function toISO(d) { return d.toISOString().slice(0,10); }
+function eachDay(a, b) {
+  const days=[]; const c=new Date(a);
+  while(c<=b){ days.push(new Date(c)); c.setDate(c.getDate()+1); }
+  return days;
+}
+
+/* ── HELPERS ─────────────────────────────────────────────── */
+function $id(id) { return document.getElementById(id); }
+function commas(n) { return Number(n).toLocaleString('en-GB'); }
+function esc(s) {
+  if(s==null||s==='') return '—';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function normFmt(f) { return (f||'').trim()||'Unknown'; }
+function fmtTag(f) {
+  const n=normFmt(f), lc=n.toLowerCase();
+  let cls='govuk-tag--other';
+  if(/ebook|e-book/i.test(lc))             cls='govuk-tag--ebook';
+  else if(/hardback|hardcover/i.test(lc))  cls='govuk-tag--hardback';
+  else if(/paper|softback/i.test(lc))      cls='govuk-tag--paper';
+  return `<span class="govuk-tag govuk-tag--format ${cls}">${esc(n)}</span>`;
+}
+function ddcClass(b) { return b.dewey ? b.dewey.charAt(0) : null; }
+function countBy(arr, fn) {
+  return arr.reduce((acc,x)=>{ const k=fn(x)||'Unknown'; acc[k]=(acc[k]||0)+1; return acc; },{});
+}
+function topN(obj, n) { return Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n); }
+function destroyChart(k) { if(charts[k]){ charts[k].destroy(); delete charts[k]; } }
+
+function normaliseIsbn(raw) {
+  return raw.replace(/[\s\-]/g, '').toUpperCase();
+}
+
+function isValidIsbn(isbn) {
+  if (isbn.length === 10) {
+    let sum = 0;
+    for (let i = 0; i < 10; i++) {
+      const char = isbn[i];
+      let digit;
+      if (i === 9 && char === 'X') {
+        digit = 10;
+      } else if (/[0-9]/.test(char)) {
+        digit = parseInt(char, 10);
+      } else {
+        return false;
+      }
+      sum += digit * (10 - i);
+    }
+    return sum % 11 === 0;
+  } else if (isbn.length === 13) {
+    if (!/^[0-9]{13}$/.test(isbn)) return false;
+    let sum = 0;
+    for (let i = 0; i < 13; i++) {
+      const digit = parseInt(isbn[i], 10);
+      sum += digit * (i % 2 === 0 ? 1 : 3);
+    }
+    return sum % 10 === 0;
+  }
+  return false;
+}
+
+/* ── ISBN SEARCH ─────────────────────────────────────────── */
+async function isbnSearch() {
+  const raw   = $id('isbn-input').value.trim();
+  const isbn  = normaliseIsbn(raw);
+
+  if (!isbn || (isbn.length !== 10 && isbn.length !== 13)) {
+    showIsbnResult('error', 'Enter a valid 10 or 13-digit ISBN (hyphens and spaces are ignored).');
+    return;
+  }
+
+  if (!isValidIsbn(isbn)) {
+    showIsbnResult('error', `Invalid ISBN checksum. "${raw}" does not appear to be a valid ISBN.`);
+    return;
+  }
+
+  if (allBooks.length > 0) {
+    const hit = allBooks.find(b => normaliseIsbn(b.isbn || '') === isbn);
+    if (hit) {
+      showIsbnFound(hit, 'Found in currently loaded data');
+      return;
+    }
+  }
+
+  await isbnFullScan(isbn);
+}
+
+// In isbnFullScan(), replace the for loop:
+
+async function isbnFullScan(isbn) {
+  isbnAbort = false;
+  const days = eachDay(FULL_START, FULL_END);
+  const total = days.length;
+  const batchSize = 10; // Scan 10 files in parallel
+
+  $id('isbn-searching').style.display = 'block';
+  $id('isbn-result').style.display    = 'none';
+  $id('isbn-clear').style.display     = 'none';
+  $id('isbn-btn').disabled            = true;
+
+  for (let i = 0; i < days.length; i += batchSize) {
+    if (isbnAbort) {
+      $id('isbn-searching').style.display = 'none';
+      $id('isbn-btn').disabled = false;
+      showIsbnResult('warn', 'Search stopped before completion.');
+      return;
+    }
+
+    const batch = days.slice(i, i + batchSize);
+    const promises = batch.map(d =>
+      fetch(buildUrl(d))
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+    );
+
+    const results = await Promise.all(promises);
+
+    for (let j = 0; j < results.length; j++) {
+      const pct = Math.round((i + j + 1) / total * 100);
+      $id('isbn-prog-fill').style.width = pct + '%';
+      $id('isbn-prog-bar').setAttribute('aria-valuenow', pct);
+      $id('isbn-progress-text').textContent = `Scanning batch ${Math.floor(i/batchSize)+1} — ${pct}%`;
+
+      const data = results[j];
+      if (data) {
+        const hit = data.find(b => normaliseIsbn(b.isbn || '') === isbn);
+        if (hit) {
+          $id('isbn-searching').style.display = 'none';
+          $id('isbn-btn').disabled = false;
+          showIsbnFound(hit, `Found in data for ${batch[j].getDate()} ${MONTHS[batch[j].getMonth()]} ${batch[j].getFullYear()}`);
+          return;
+        }
+      }
+    }
+  }
+
+  $id('isbn-searching').style.display = 'none';
+  $id('isbn-btn').disabled = false;
+  showIsbnResult('not-found', `ISBN ${isbn} was not found in the full dataset.`);
+}
+
+function stopIsbnSearch() {
+  isbnAbort = true;
+}
+
+function showIsbnFound(book, sourceNote) {
+  $id('isbn-result').style.display = 'block';
+  $id('isbn-clear').style.display  = 'inline';
+
+  const titleHtml = book.link
+    ? `<a href="${esc(book.link)}" target="_blank" rel="noopener noreferrer">${esc(book.title)}</a>`
+    : esc(book.title);
+
+  const fields = [
+    { label: 'Author',      value: book.author,    mono: false },
+    { label: 'Publisher',   value: book.publisher, mono: false },
+    { label: 'Format',      value: null,           tag: fmtTag(book.format) },
+    { label: 'Pub date',    value: book.pubDate,   mono: false },
+    { label: 'ISBN',        value: book.isbn,      mono: true  },
+    { label: 'DDC',         value: book.dewey,     mono: true  },
+    { label: 'RRP',         value: book.rrp || '—', mono: false },
+  ];
+
+  $id('isbn-result').innerHTML = `
+    <div class="isbn-result__found" role="region" aria-label="ISBN search result">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <span class="govuk-tag govuk-tag--green">Found</span>
+        <span style="font-size:13px;color:var(--text-2);margin-top:2px">${esc(sourceNote)}</span>
+      </div>
+      <p class="isbn-result__title">${titleHtml}</p>
+      <div class="isbn-result__meta-grid">
+        ${fields.map(f => `
+          <div class="isbn-meta-item">
+            <div class="isbn-meta-label">${f.label}</div>
+            <div class="isbn-meta-value ${f.mono ? 'mono' : ''}">${f.tag || esc(f.value)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  const ann = document.createElement('div');
+  ann.setAttribute('role','status'); ann.setAttribute('aria-live','polite'); ann.className='sr-only';
+  ann.textContent = `ISBN found: ${book.title} by ${book.author}`;
+  document.body.appendChild(ann);
+  setTimeout(() => ann.remove(), 3000);
+
+  $id('isbn-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showIsbnResult(type, message) {
+  $id('isbn-result').style.display = 'block';
+  $id('isbn-clear').style.display  = 'inline';
+  if (type === 'not-found') {
+    $id('isbn-result').innerHTML = `
+      <div class="isbn-result__not-found" role="alert">
+        <p style="font-weight:700;margin-bottom:4px;color:var(--red)">Not found</p>
+        <p style="font-size:14px">${esc(message)}</p>
+      </div>`;
+  } else if (type === 'error') {
+    $id('isbn-result').innerHTML = `
+      <div class="isbn-result__not-found" role="alert">
+        <p style="font-weight:700;color:var(--red);margin-bottom:4px">Error</p>
+        <p style="font-size:14px">${esc(message)}</p>
+      </div>`;
+  } else if (type === 'warn') {
+    $id('isbn-result').innerHTML = `
+      <div style="background:var(--card-bg);border-left:5px solid var(--orange);padding:14px 20px;" role="status">
+        <p style="font-size:14px">${esc(message)}</p>
+      </div>`;
+  }
+}
+
+function clearIsbn() {
+  $id('isbn-input').value          = '';
+  $id('isbn-result').style.display = 'none';
+  $id('isbn-clear').style.display  = 'none';
+  $id('isbn-result').innerHTML     = '';
+  $id('isbn-input').focus();
+}
+
+$id('isbn-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); isbnSearch(); }
+});
+
+/* ── QUICK RANGE ─────────────────────────────────────────── */
+function setQuick(n) {
+  const to = new Date('2024-01-12'), from = new Date(to);
+  from.setDate(from.getDate() - (n - 1));
+  $id('date-from').value = toISO(from);
+  $id('date-to').value   = toISO(to);
+}
+
+/* ── ALERTS ──────────────────────────────────────────────── */
+function showError(msg) { const e=$id('alert-error'); $id('error-body').textContent=msg; e.style.display='block'; e.focus(); }
+function showWarn(msg)  { const e=$id('alert-warn'); e.textContent=msg; e.style.display='block'; }
+function clearAlerts()  { $id('alert-error').style.display='none'; $id('alert-warn').style.display='none'; }
+function setProgress(pct, txt) { $id('prog-fill').style.width=pct+'%'; $id('progress-wrap').setAttribute('aria-valuenow',pct); $id('prog-text').textContent=txt; }
+
+/* ── LOAD DATA ───────────────────────────────────────────── */
+async function loadData() {
+  clearAlerts();
+  const fromVal=$id('date-from').value, toVal=$id('date-to').value;
+  if(!fromVal||!toVal){ showError('Enter both a From and To date.'); return; }
+  const start=parseDate(fromVal), end=parseDate(toVal);
+  if(start>end){ showError('The "From" date must not be after the "To" date.'); return; }
+
+  const days=eachDay(start,end);
+  const btn=$id('load-btn');
+  btn.disabled=true;
+  $id('progress-wrap').style.display='block';
+
+  const books=[], skipped=[];
+  const batchSize = 6; // Fetch 6 files in parallel as prev was slow AF
+
+  for(let i=0;i<days.length;i+=batchSize){
+    const batch=days.slice(i,i+batchSize);
+    const promises=batch.map(d=>
+      fetch(buildUrl(d))
+        .then(res=>res.ok?res.json():null)
+        .catch(()=>null)
+    );
+    
+    const results=await Promise.all(promises);
+    
+    results.forEach((data,idx)=>{
+      const pct=Math.round((i+idx+1)/days.length*100);
+      setProgress(pct,`Loading batch ${Math.floor(i/batchSize)+1} of ${Math.ceil(days.length/batchSize)}`);
+      
+      if(data){
+        data.forEach(b=>{ b._day=toISO(batch[idx]); b.rrpNum=parseFloat((b.rrp||'').replace(/[^0-9.]/g,''))||0; });
+        books.push(...data);
+      } else {
+        skipped.push(toISO(batch[idx]));
+      }
+    });
+  }
+
+  $id('progress-wrap').style.display='none';
+  btn.disabled=false;
+
+  if(!books.length){
+    showError(`No data found. ${skipped.length} day(s) returned no file. Try a different range.`); return;
+  }
+  if(skipped.length) showWarn(`${skipped.length} day(s) had no data and were skipped.`);
+
+  allBooks=books; viewBooks=[...allBooks]; curPage=0; sortKey='title'; sortAsc=true;
+
+  $id('empty-state').style.display='none';
+  $id('page-intro').style.display='none';
+  $id('metrics').style.display='grid';
+  $id('chart-grid').style.display='grid';
+  $id('table-section').style.display='block';
+  $id('sidebar-stats').style.display='block';
+  $id('filter-section').style.display='block';
+  document.querySelectorAll('.govuk-table__head th[aria-sort]').forEach(th=>th.setAttribute('aria-sort','none'));
+
+  buildFilters(); renderMetrics(); renderAllCharts(); renderTable();
+
+  const ann=document.createElement('div');
+  ann.setAttribute('role','status'); ann.setAttribute('aria-live','polite'); ann.className='sr-only';
+  ann.textContent=`Dashboard loaded. ${commas(books.length)} books found.`;
+  document.body.appendChild(ann); setTimeout(()=>ann.remove(),3000);
+}
+
+/* ── FILTERS ─────────────────────────────────────────────── */
+function buildFilters() {
+  const fmts=[...new Set(allBooks.map(b=>normFmt(b.format)))].sort();
+  $id('fmt-select').innerHTML='<option value="">All formats</option>'+fmts.map(f=>`<option>${esc(f)}</option>`).join('');
+  $id('ddc-select').innerHTML='<option value="">All classes</option>'+Object.entries(DDC_CLASSES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+}
+function applyFilter() {
+  const q=$id('search-box').value.toLowerCase().trim();
+  const fmt=$id('fmt-select').value, ddc=$id('ddc-select').value;
+  viewBooks=allBooks.filter(b=>{
+    if(q&&![b.title,b.author,b.publisher,b.isbn,b.dewey].some(v=>(v||'').toLowerCase().includes(q))) return false;
+    if(fmt&&normFmt(b.format)!==fmt) return false;
+    if(ddc&&ddcClass(b)!==ddc) return false;
+    return true;
+  });
+  curPage=0; renderTable(); updateSidebarStats();
+}
+
+/* ── METRICS ─────────────────────────────────────────────── */
+function renderMetrics() {
+  const total=allBooks.length;
+  const authors=new Set(allBooks.map(b=>b.author).filter(Boolean)).size;
+  const pubs=new Set(allBooks.map(b=>b.publisher).filter(Boolean)).size;
+  const isbns=new Set(allBooks.map(b=>b.isbn).filter(Boolean)).size;
+  const priced=allBooks.filter(b=>b.rrpNum>0);
+  const avg=priced.length?priced.reduce((s,b)=>s+b.rrpNum,0)/priced.length:0;
+  const epct=Math.round(allBooks.filter(b=>/ebook|e-book/i.test(b.format||'')).length/total*100);
+  const items=[
+    {val:commas(total),  lbl:'Books loaded',   sub:'across selected dates', c:'#1d70b8'},
+    {val:commas(authors),lbl:'Authors',         sub:'unique names',          c:'#00703c'},
+    {val:commas(pubs),   lbl:'Publishers',      sub:'unique names',          c:'#4c2c92'},
+    {val:commas(isbns),  lbl:'ISBNs',           sub:'distinct editions',     c:'#28a197'},
+    {val:avg>0?`£${avg.toFixed(2)}`:'N/A', lbl:'Average RRP', sub:`${commas(priced.length)} priced items`, c:'#f47738'},
+    {val:epct+'%',       lbl:'Digital share',   sub:'eBook formats',         c:'#d4351c'},
+  ];
+  $id('metrics').innerHTML=items.map(i=>`
+    <div class="metric" style="--m-accent:${i.c}" role="img" aria-label="${i.lbl}: ${i.val}">
+      <div class="metric-val">${i.val}</div>
+      <div class="metric-lbl">${i.lbl}</div>
+      <div class="metric-sub">${i.sub}</div>
+    </div>`).join('');
+  updateSidebarStats();
+}
+function updateSidebarStats() {
+  const days=new Set(allBooks.map(b=>b._day)).size;
+  $id('sstat-list').innerHTML=[
+    {label:'Total books',    value:commas(allBooks.length)},
+    {label:'Days with data', value:days},
+    {label:'Filtered',       value:commas(viewBooks.length)},
+  ].map(s=>`<div class="sstat"><span class="sstat-label">${s.label}</span><span class="sstat-value">${s.value}</span></div>`).join('');
+}
+
+/* ── CHARTS ──────────────────────────────────────────────── */
+function renderAllCharts() {
+  renderDeweyChart(allBooks); renderFormatChart(allBooks);
+  renderTimelineChart(allBooks); renderPublisherBars(allBooks); renderPriceChart(allBooks);
+}
+const SCALES = {
+  x:{ticks:{color:'#505a5f',font:{size:11},maxRotation:30},grid:{color:'#e8e8e8'}},
+  y:{ticks:{color:'#505a5f',font:{size:11}},grid:{color:'#e8e8e8'}}
+};
+const TIP = { backgroundColor:'#0b0c0c', titleColor:'#ffffff', bodyColor:'#b1b4b6' };
+
+function renderDeweyChart(data) {
+  destroyChart('dewey');
+  const counts=countBy(data,b=>ddcClass(b));
+  const labels=[],vals=[],colors=[];
+  Object.entries(DDC_CLASSES).forEach(([k,name],i)=>{ labels.push(name.split('—')[0].trim()); vals.push(counts[k]||0); colors.push(CHART_COLOURS[i]); });
+  charts['dewey']=new Chart($id('chart-dewey'),{
+    type:'bar', data:{labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      onClick(e,els){ if(!els.length)return; const k=Object.keys(DDC_CLASSES)[els[0].index]; openDrillTable(Object.values(DDC_CLASSES)[els[0].index],data.filter(b=>ddcClass(b)===k)); },
+      plugins:{legend:{display:false},tooltip:{...TIP,callbacks:{title:i=>Object.values(DDC_CLASSES)[i[0].dataIndex],label:c=>` ${commas(c.raw)} books`}}},
+      scales:SCALES}
+  });
+}
+function renderFormatChart(data) {
+  destroyChart('fmt');
+  const raw=countBy(data,b=>normFmt(b.format)), top=topN(raw,8);
+  charts['fmt']=new Chart($id('chart-fmt'),{
+    type:'doughnut', data:{labels:top.map(([k])=>k),datasets:[{data:top.map(([,v])=>v),backgroundColor:CHART_COLOURS,borderColor:'#fff',borderWidth:2,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      onClick(e,els){ if(!els.length)return; const fmt=top[els[0].index][0]; openDrillTable(`Format: ${fmt}`,data.filter(b=>normFmt(b.format)===fmt)); },
+      plugins:{legend:{position:'right',labels:{color:'#0b0c0c',font:{size:12},padding:12,usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{...TIP,callbacks:{label:c=>` ${c.label}: ${commas(c.raw)} (${(c.raw/data.length*100).toFixed(1)}%)`}}}}
+  });
+}
+function renderTimelineChart(data) {
+  destroyChart('timeline');
+  const counts=countBy(data,b=>b._day), sorted=Object.entries(counts).sort((a,b)=>a[0].localeCompare(b[0]));
+  $id('timeline-meta').textContent=`${sorted.length} day${sorted.length!==1?'s':''} with data`;
+  charts['timeline']=new Chart($id('chart-timeline'),{
+    type:'line', data:{labels:sorted.map(([d])=>d),datasets:[{data:sorted.map(([,v])=>v),fill:true,tension:.3,borderColor:'#1d70b8',backgroundColor:'rgba(29,112,184,.08)',pointBackgroundColor:'#1d70b8',pointBorderColor:'#fff',pointBorderWidth:1,pointRadius:sorted.length>14?3:5,pointHoverRadius:6,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      onClick(e,els){ if(!els.length)return; const day=sorted[els[0].index][0]; openDrillTable(`Date: ${day}`,data.filter(b=>b._day===day)); },
+      plugins:{legend:{display:false},tooltip:{...TIP,callbacks:{label:c=>` ${commas(c.raw)} books`}}},
+      scales:{x:{ticks:{color:'#505a5f',font:{size:10},maxTicksLimit:14},grid:{color:'#e8e8e8'}},y:{ticks:{color:'#505a5f',font:{size:11}},grid:{color:'#e8e8e8'}}}}
+  });
+}
+
+function renderPublisherBars(data) {
+  const counts=countBy(data,b=>b.publisher), top=topN(counts,12), max=top[0]?.[1]||1;
+  $id('bar-publishers').innerHTML=top.map(([name,count],i)=>`
+    <li class="bar-item">
+      <button class="bar-button" 
+        aria-label="Drill down ${esc(name)}, ${commas(count)} books"
+        onclick="drillByPublisher('${name.replace(/'/g,"\\'")}')"
+        type="button">
+        <div class="bar-row-top">
+          <span class="bar-name" title="${esc(name)}">${esc(name)}</span>
+          <span class="bar-count">${commas(count)}</span>
+        </div>
+        <div class="bar-track" role="presentation">
+          <div class="bar-fill" style="width:${(count/max*100).toFixed(1)}%;background:${CHART_COLOURS[i%CHART_COLOURS.length]}"></div>
+        </div>
+      </button>
+    </li>`).join('');
+}
+
+function drillByPublisher(name) {
+  const books = allBooks.filter(b => b.publisher === name);
+  openDrillTable(`Publisher: ${name}`, books);
+}
+
+function renderPriceChart(data) {
+  destroyChart('price');
+  const B=[
+    {label:'Under £10',min:0,max:10},
+    {label:'£10–£25',min:10,max:25},
+    {label:'£25–£50',min:25,max:50},
+    {label:'£50–£100',min:50,max:100},
+    {label:'£100–£200',min:100,max:200},
+    {label:'Over £200',min:200,max:Infinity}
+  ];
+  B.forEach(b=>b.count=data.filter(x=>x.rrpNum>0&&x.rrpNum>=b.min&&x.rrpNum<b.max).length);
+  
+  charts['price']=new Chart($id('chart-price'),{
+    type:'bar', 
+    data:{
+      labels:B.map(b=>b.label),
+      datasets:[{
+        data:B.map(b=>b.count),
+        backgroundColor:CHART_COLOURS,
+        borderRadius:3,
+        borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      onClick(e,els){ 
+        if(!els.length)return; 
+        const bkt=B[els[0].index]; 
+        openDrillTable(`Price: ${bkt.label}`,data.filter(b=>b.rrpNum>0&&b.rrpNum>=bkt.min&&b.rrpNum<bkt.max)); 
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{...TIP,callbacks:{label:c=>` ${commas(c.raw)} books`}}
+      },
+      scales:SCALES
+    }
+  });
+}
+
+/* ── DRILL MODAL ─────────────────────────────────────────── */
+function openDrillTable(title, rows) {
+  lastFocus=document.activeElement;
+  drillData = rows;
+  drillTitle = title;
+  
+  $id('drill-title').textContent=`${title} — ${commas(rows.length)} book${rows.length!==1?'s':''}`;
+  
+  // Build toolbar with download and chart builder
+  // WCAG 4.1.2 Ensure  select element has an accessible name 
+  $id('drill-toolbar').innerHTML = `
+    <button class="btn-download" onclick="downloadDrillCSV()">
+      ⬇ Download CSV
+    </button>
+    <button class="btn-chart" id="btn-chart-toggle" onclick="toggleDrillChart()">
+       Data Summary
+    </button>
+    <label for="drill-chart-type" style="font-size:14px;font-weight:600;color:var(--text);margin-right:8px;">Chart type:</label>
+    <select id="drill-chart-type" onchange="updateDrillChart()" style="display:none">
+      <option value="format">By Format</option>
+      <option value="dewey">By Dewey Class</option>
+      <option value="publisher">By Publisher (Top 10)</option>
+      <option value="price">By Price Range</option>
+    </select>
+  `;
+  
+  const sorted=[...rows].sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+  $id('drill-body').innerHTML=buildDrillHTML(sorted);
+  
+  const ov=$id('drill-overlay');
+  ov.removeAttribute('aria-hidden'); ov.style.display='flex'; ov.classList.add('open');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>$id('drill-close').focus(),50);
+}
+
+function closeDrillModal() {
+  const ov=$id('drill-overlay');
+  ov.classList.remove('open'); ov.setAttribute('aria-hidden','true'); ov.style.display='none';
+  document.body.style.overflow=''; 
+  $id('drill-body').innerHTML='';
+  $id('drill-toolbar').innerHTML='';
+  if(drillChart){ drillChart.destroy(); drillChart=null; }
+  drillData = [];
+  drillTitle = '';
+  if(lastFocus) lastFocus.focus();
+}
+
+$id('drill-overlay').addEventListener('click',e=>{ if(e.target===$id('drill-overlay')) closeDrillModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$id('drill-overlay').classList.contains('open')) closeDrillModal(); });
+
+function buildDrillHTML(rows) {
+  if(!rows.length) return '<p class="govuk-body" style="color:var(--text-2)">No books match this selection.</p>';
+  const cap=200, slice=rows.slice(0,cap);
+  const note=rows.length>cap?`<p class="govuk-body-s" style="margin-bottom:12px">Showing first ${commas(cap)} of ${commas(rows.length)}.</p>`:'';
+  return note+`<div style="overflow-x:auto"><table class="govuk-table" style="font-size:13px"><thead class="govuk-table__head"><tr>
+    <th scope="col" style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border-dk);background:var(--page-bg)">Title</th>
+    <th scope="col" style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border-dk);background:var(--page-bg)">Author</th>
+    <th scope="col" style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border-dk);background:var(--page-bg)">Publisher</th>
+    <th scope="col" style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border-dk);background:var(--page-bg)">DDC</th>
+    <th scope="col" style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border-dk);background:var(--page-bg)">Format</th>
+    <th scope="col" style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border-dk);background:var(--page-bg)">RRP</th>
+  </tr></thead><tbody class="govuk-table__body">
+    ${slice.map(b=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 12px;color:var(--text);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        ${b.link?`<a href="${esc(b.link)}" target="_blank" rel="noopener" style="color:var(--blue)">${esc(b.title)}</a>`:esc(b.title)}</td>
+      <td style="padding:8px 12px;color:var(--text-2);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.author)}</td>
+      <td style="padding:8px 12px;color:var(--text-2);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.publisher)}</td>
+      <td style="padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--text-3)">${esc(b.dewey)}</td>
+      <td style="padding:8px 12px">${fmtTag(b.format)}</td>
+      <td style="padding:8px 12px;color:var(--green);font-weight:700;white-space:nowrap">${b.rrpNum>0?esc(b.rrp):'—'}</td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+/* ── DRILL DOWNLOAD ──────────────────────────────────────── */
+function downloadDrillCSV() {
+  if(!drillData.length) return;
+  const cols=['title','author','publisher','format','pubDate','isbn','dewey','rrp','link'];
+  const rows=drillData.map(b=>cols.map(c=>`"${String(b[c]||'').replace(/"/g,'""')}"`).join(','));
+  const filename = drillTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.csv';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+[cols.join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download=filename; a.click();
+}
+
+/* ── DRILL CHART BUILDER ─────────────────────────────────── */
+function toggleDrillChart() {
+  const btn = $id('btn-chart-toggle');
+  const select = $id('drill-chart-type');
+  const body = $id('drill-body');
+  
+  if(btn.classList.contains('active')) {
+    // Hide chart
+    btn.classList.remove('active');
+    select.style.display = 'none';
+    const chartContainer = body.querySelector('.drill-chart-container');
+    if(chartContainer) chartContainer.remove();
+    if(drillChart){ drillChart.destroy(); drillChart=null; }
+  } else {
+    // Show chart
+    btn.classList.add('active');
+    select.style.display = 'inline-block';
+    updateDrillChart();
+  }
+}
+
+function updateDrillChart() {
+  const type = $id('drill-chart-type').value;
+  const body = $id('drill-body');
+  
+  // Remove existing chart container
+  let container = body.querySelector('.drill-chart-container');
+  if(!container) {
+    container = document.createElement('div');
+    container.className = 'drill-chart-container';
+    container.innerHTML = '<canvas id="drill-chart-canvas"></canvas>';
+    body.insertBefore(container, body.firstChild);
+  }
+  
+  if(drillChart){ drillChart.destroy(); drillChart=null; }
+  
+  const canvas = $id('drill-chart-canvas');
+  let labels, values, chartType = 'bar';
+  
+  if(type === 'format') {
+    const counts = countBy(drillData, b => normFmt(b.format));
+    const top = topN(counts, 8);
+    labels = top.map(([k])=>k);
+    values = top.map(([,v])=>v);
+  } else if(type === 'dewey') {
+    const counts = countBy(drillData, b => ddcClass(b));
+    labels = Object.keys(DDC_CLASSES).map(k => DDC_CLASSES[k].split('—')[0].trim());
+    values = Object.keys(DDC_CLASSES).map(k => counts[k] || 0);
+  } else if(type === 'publisher') {
+    const counts = countBy(drillData, b => b.publisher);
+    const top = topN(counts, 10);
+    labels = top.map(([k])=>k||'Unknown');
+    values = top.map(([,v])=>v);
+  } else if(type === 'price') {
+  const B=[
+    {label:'Under £10',min:0,max:10},
+    {label:'£10–£25',min:10,max:25},
+    {label:'£25–£50',min:25,max:50},
+    {label:'£50–£100',min:50,max:100},
+    {label:'Over £100',min:100,max:Infinity}
+  ];
+  labels = B.map(b=>b.label);
+  values = B.map(b=>drillData.filter(x=>x.rrpNum>0&&x.rrpNum>=b.min&&x.rrpNum<b.max).length);
+}
+  
+  drillChart = new Chart(canvas, {
+    type: chartType,
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: CHART_COLOURS,
+        borderRadius: 3,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...TIP, callbacks: { label: c => ` ${commas(c.raw)} books` }}
+      },
+      scales: SCALES
+    }
+  });
+}
+
+/* ── MAIN TABLE ──────────────────────────────────────────── */
+function sortTable(key) {
+  if(sortKey===key) sortAsc=!sortAsc; else { sortKey=key; sortAsc=true; }
+  const keyMap={title:0,author:1,publisher:2,pubDate:4,dewey:5,rrpNum:6};
+  document.querySelectorAll('.govuk-table__head th[aria-sort]').forEach(th=>th.setAttribute('aria-sort','none'));
+  const th=document.querySelectorAll('.govuk-table__head th')[keyMap[key]];
+  if(th) th.setAttribute('aria-sort',sortAsc?'ascending':'descending');
+  curPage=0; renderTable();
+}
+function getSorted() {
+  return [...viewBooks].sort((a,b)=>{
+    if(sortKey==='rrpNum') return sortAsc?a.rrpNum-b.rrpNum:b.rrpNum-a.rrpNum;
+    const av=String(a[sortKey]||''), bv=String(b[sortKey]||'');
+    return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
+  });
+}
+function renderTable() {
+  const rows=getSorted(), total=rows.length;
+  const pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  curPage=Math.min(curPage,pages-1);
+  const slice=rows.slice(curPage*PAGE_SIZE,(curPage+1)*PAGE_SIZE);
+  $id('result-count').textContent=`${commas(total)} result${total!==1?'s':''}`;
+  $id('tbl-body').innerHTML=slice.map(b=>`
+    <tr>
+      <td class="td-title">${b.link?`<a href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.title)}</a>`:esc(b.title)}</td>
+      <td class="td-body">${esc(b.author)}</td>
+      <td class="td-body">${esc(b.publisher)}</td>
+      <td>${fmtTag(b.format)}</td>
+      <td class="td-body" style="white-space:nowrap">${esc(b.pubDate)}</td>
+      <td class="td-mono">${esc(b.dewey)}</td>
+      <td class="td-price">${b.rrpNum>0?esc(b.rrp):'—'}</td>
+    </tr>`).join('');
+  renderPagination(total,pages); updateSidebarStats();
+}
+function renderPagination(total,pages) {
+  const pg=$id('pagination');
+  if(pages<=1){ pg.innerHTML=''; return; }
+  const start=curPage*PAGE_SIZE+1, end=Math.min((curPage+1)*PAGE_SIZE,total);
+  let h=`<span class="govuk-pagination__info">Showing ${commas(start)}–${commas(end)} of ${commas(total)}</span><ul class="govuk-pagination__list">`;
+  h+=`<li class="govuk-pagination__item"><button onclick="goPage(${curPage-1})" ${curPage===0?'disabled':''}aria-label="Previous page">Prev</button></li>`;
+  let last=-1;
+  for(let i=0;i<pages;i++){
+    if(i===0||i===pages-1||Math.abs(i-curPage)<=2){
+      if(last>=0&&i-last>1) h+=`<li class="govuk-pagination__item--ellipsis">…</li>`;
+      h+=`<li class="govuk-pagination__item ${i===curPage?'govuk-pagination__item--current':''}"><button onclick="goPage(${i})" aria-label="Page ${i+1}" ${i===curPage?'aria-current="page"':''}>${i+1}</button></li>`;
+      last=i;
+    }
+  }
+  h+=`<li class="govuk-pagination__item"><button onclick="goPage(${curPage+1})" ${curPage>=pages-1?'disabled':''}aria-label="Next page">Next</button></li></ul>`;
+  pg.innerHTML=h;
+}
+function goPage(p) { if(p<0||p>=Math.ceil(viewBooks.length/PAGE_SIZE))return; curPage=p; renderTable(); $id('table-section').scrollIntoView({behavior:'smooth',block:'start'}); }
+
+/* ── EXPORT ──────────────────────────────────────────────── */
+function exportCSV() {
+  const cols=['title','author','publisher','format','pubDate','isbn','dewey','rrp','link'];
+  const rows=getSorted().map(b=>cols.map(c=>`"${String(b[c]||'').replace(/"/g,'""')}"`).join(','));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+[cols.join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download='bfs-dewey-export.csv'; a.click();
+}
+</script>
+</body>
+</html>
