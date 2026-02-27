@@ -85,8 +85,7 @@
         <!-- Date Range -->
         <div class="controls-group controls-group--dates">
           <h2 class="controls-group__title" id="controls-heading">Select date range</h2>
-          <!-- Needs to be updated when and if the main repo database is updated -->
-          <p class="govuk-hint controls-hint">Data available 01 January 2020 – 10 Feb 2026</p>
+          <p class="govuk-hint controls-hint">Data available <span id="data-range-text">1 November 2019 — 10 February 2026</span></p>
           <p class="govuk-body-l" style="max-width:620px;margin-bottom:25px;color:var(--text-2)">
             Analyse publication trends, Dewey Decimal classifications, formats and prices
             from the BFS Dewey dataset. Use the ISBN search above to look up any book directly,
@@ -95,12 +94,12 @@
           <div class="controls-dates">
             <div class="controls-date-field">
               <label class="govuk-label" for="date-from">From</label>
-              <input class="govuk-input" type="date" id="date-from" value="2020-01-01" min="2020-01-01"
+              <input class="govuk-input" type="date" id="date-from" value="2020-01-01" min="2019-11-01"
                 max="2026-02-10">
             </div>
             <div class="controls-date-field">
               <label class="govuk-label" for="date-to">To</label>
-              <input class="govuk-input" type="date" id="date-to" value="2020-06-10" min="2020-01-01" max="2026-02-10">
+              <input class="govuk-input" type="date" id="date-to" value="2020-06-10" min="2019-11-01" max="2026-02-10">
             </div>
             <div class="controls-quick" role="group" aria-label="Quick date shortcuts">
               <button class="govuk-button--secondary" onclick="setQuick(1)">1 day</button>
@@ -323,6 +322,12 @@
 
     /* ── CONFIG ──────────────────────────────────────────────── */
     const BASE = 'https://raw.githubusercontent.com/Pi-0r-Tau/BFS_Dewey_JSON_Data/main/PerDay';
+
+    const DATA_RANGE = {
+      startDate: new Date(2019, 10, 1), 
+      endDate: new Date(2026, 1, 10),
+      displayText: '1 November 2019 — 10 February 2026'
+    }
     const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'];
     const DDC_CLASSES = {
@@ -335,8 +340,16 @@
     const CHART_COLOURS = ['#1d70b8', '#00703c', '#d4351c', '#f47738', '#4c2c92', '#28a197', '#0b0c0c', '#b58840', '#5694ca'];
     const PAGE_SIZE = 30;
 
-    const FULL_START = new Date(2020, 0, 1); // Needs to be changed when and if BFS_DEWEY_JSON is updated 
-    const FULL_END = new Date(2026, 1, 10);
+    const FULL_START = DATA_RANGE.startDate;
+    const FULL_END = DATA_RANGE.endDate;
+    const minDate = toISO(FULL_START);
+    const maxDate = toISO(FULL_END);
+    $id('date-from').min = minDate;
+    $id('date-from').max = maxDate;
+    $id('date-to').min = minDate;
+    $id('date-to').max = maxDate;
+
+    $id('data-range-text').textContent = DATA_RANGE.displayText;
 
     /* ── STATE ───────────────────────────────────────────────── */
     let allBooks = [];
@@ -587,9 +600,9 @@
 
     /* ── QUICK RANGE ─────────────────────────────────────────── */
     function setQuick(n) {
-      const to = new Date('2024-01-12'), from = new Date(to);
-      from.setDate(from.getDate() - (n - 1));
-      $id('date-from').value = toISO(from);
+      const from = parseDate($id('date-from').value);
+      const to = new Date(from);
+      to.setDate(to.getDate() + (n - 1));
       $id('date-to').value = toISO(to);
     }
 
