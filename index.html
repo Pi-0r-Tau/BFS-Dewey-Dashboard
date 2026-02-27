@@ -368,10 +368,14 @@
 
     /* ── PATH BUILDER ────────────────────────────────────────── */
     function buildUrl(d) {
+      // Issue with zero padding in months from 2026 onwards, so using non-padded month for years >= 2026
       const day = d.getDate();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const yy = String(d.getFullYear()).slice(2);
-      return `${BASE}/${d.getFullYear()}/${MONTHS[d.getMonth()]}/${day}-${mm}-${yy}.json`;
+      const year = d.getFullYear();
+      const yy = String(year).slice(2);
+      const mm = year >= 2026
+        ? String(d.getMonth() + 1)
+        : String(d.getMonth() + 1).padStart(2, '0');
+      return `${BASE}/${year}/${MONTHS[d.getMonth()]}/${day}-${mm}-${yy}.json`;
     }
     function parseDate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
     function toISO(d) { return d.toISOString().slice(0, 10); }
